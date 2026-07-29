@@ -1,4 +1,4 @@
-# HMM-Net: Hierarchical Multimodal Multi-label Network for Harmful Video Classification
+# HMM-Net: Hierarchical Multimodal Multi-label Network for Harmful Video Classification at Viet Nam
 
 The explosive growth of short-form video platforms (like TikTok and Reels) brings massive content moderation challenges. A harmful video might hide behind normal visuals while the audio contains offensive language, or the video might seem safe but the on-screen text (OCR) is clickbait or a scam. Relying on a single modality (only vision or only audio) is insufficient.
 
@@ -24,6 +24,20 @@ src/
 ```
 
 ---
+## Dataset
+- We Collected and manually annotated a 6,285-video Vietnamese TikTok harmful-content dataset by extending the **[MetaHarm](https://arxiv.org/abs/2504.16304)** taxonomy with a new harmful category and localized definitions for child safety.
+## Harmful Content Taxonomy
+
+| Category | Scope | Typical Examples |
+|----------|-------|------------------|
+| **Information Harms** | Content that spreads misinformation, disinformation, conspiracy theories, unverified medical treatments, fabricated news, or anti-government propaganda targeting Vietnam. | Fake news, conspiracy theories, unverified health advice, fabricated stories, anti-state propaganda. |
+| **Hate and Harassment Harms** | Content containing insults, abusive language, identity attacks, or hate speech targeting individuals or groups based on gender, race, ethnicity, age, religion, political ideology, disability, or sexual orientation. | Hate speech, harassment, identity-based discrimination, offensive slurs, targeted abuse. |
+| **Addictive Harms** | Content that promotes or encourages addictive or harmful behaviors, including online gaming addiction, drug use, smoking, alcohol consumption, and gambling. | Online gaming promotion, drug-related content, smoking, alcohol abuse, gambling videos. |
+| **Clickbait Harms** | Content designed to manipulate user engagement through misleading or sensational claims, fraudulent financial schemes, superstition, or rumor promotion. | Clickbait titles, game account trading, get-rich-quick schemes, financial scams, rumor spreading, superstition, fortune-telling, love spells. |
+| **Physical Harms** | Content depicting or promoting self-harm, suicide, eating disorders, dangerous challenges or pranks, and graphic violent content. | Self-harm, suicide-related content, eating disorder promotion, dangerous challenges, graphic violence. |
+| **Sexual Harms** | Content containing sexually explicit material, nudity, sexual activities, sexual exploitation, or sexually suggestive performances. | Pornography, nudity, sexual acts, sexual abuse, sexually explicit conversations, revealing dance videos. |
+| **Psychological Harms** | Content that may cause psychological distress, fear, or emotional discomfort, including horror, supernatural, or depressive content. | Horror videos, ghost or supernatural content, disturbing scenes, emotionally depressing or stressful videos. |
+
 
 ## ⚙️ Pre-processing Pipeline
 
