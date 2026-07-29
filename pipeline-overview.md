@@ -39,7 +39,6 @@ Mục tiêu: Đảm bảo phân phối nhãn (đặc biệt là các nhãn hiế
 ### Stage 1: Phân loại nhị phân (Binary Classification)
 - **Mục tiêu:** Tách biệt video `normal_content` và `harmful`.
 - **Dataset / DataLoader:** Load từ `stage1_train.csv`.
-- **Architecture:** SigLIP2 + PhoBERT + CLIP + ChunkFormer -> CLIPGateFusionV5 -> Linear Head (output size = 1).
 - **Loss Function:** `BCEWithLogitsLoss`. 
   - *Xử lý Imbalance:* Dataset có tỷ lệ normal:harmful ~ 1:2.9. Khai báo `pos_weight = số mẫu normal / số mẫu harmful` (~1620/4665 ~ 0.347) hoặc ngược lại tuỳ định nghĩa class positive. Nếu coi `harmful` (1) là positive thì `pos_weight = 1620 / 4665`. Điều này giúp phạt nặng sai số trên class `normal`.
 - **Checkpoints:** Lưu model có `Val Binary F1` hoặc `Val ROC-AUC` tốt nhất.
