@@ -1,1 +1,4 @@
-/all_videos/*
+.venv
+/data
+.idea
+__pycache__/

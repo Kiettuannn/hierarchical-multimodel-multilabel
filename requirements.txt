@@ -1,0 +1,9 @@
+pandas
+opencv-python
+tqdm
+rapidfuzz
+matplotlib
+openai
+google-genai
+scikit-multilearn
+scikit-learn
