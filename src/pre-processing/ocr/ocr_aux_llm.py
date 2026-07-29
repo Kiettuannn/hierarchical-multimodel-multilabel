@@ -11,7 +11,7 @@ import json
 # EXPERIMENT 1: ZERO-SHOT LLM AUXILIARY LABELING
 # ==========================================
 
-client = genai.Client(api_key="AQ.Ab8RN6JDWxnVlkLKAvqzyrzfvjO7kN87P1zvc68Z1LaxejNL3g")
+client = genai.Client(api_key="")
 
 # Dùng model flash-lite cho tiết kiệm và siêu nhanh (rất tốt cho task phân loại đơn giản)
 # Nếu muốn suy luận sâu hơn, có thể đổi thành 'gemini-2.0-flash'

@@ -10,7 +10,7 @@ import json
 # CẤU HÌNH API VÀ FILE (GEMINI API - BATCHING MODE)
 # ==========================================
 
-client = genai.Client(api_key="AIzaSyDY7QpKu1jpeyRy4ilqQLB_khrJyDwfeA8")
+client = genai.Client(api_key="")
 
 # Đảm bảo dùng model mới. Nếu lỗi 404, bạn đổi thành 'gemini-2.0-flash'
 MODEL_NAME = 'gemini-3.1-flash-lite'
