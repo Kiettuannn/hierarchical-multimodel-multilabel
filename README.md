@@ -25,7 +25,7 @@ src/
 
 ---
 ## Dataset
-- We Collected and manually annotated a 6,285-video Vietnamese TikTok harmful-content dataset by extending the **[MetaHarm](https://arxiv.org/abs/2504.16304)** taxonomy with a new harmful category and localized definitions for child safety.
+- We collected and manually annotated a dataset of 6,285 Vietnamese TikTok videos by extending the **[MetaHarm](https://arxiv.org/abs/2504.16304)** taxonomy. Specifically, we introduced one additional harmful-content category: Psychological and refined the category definitions to better reflect the linguistic, cultural, and social characteristics of Vietnamese TikTok, with a particular focus on child safety.
 ## Harmful Content Taxonomy
 
 | Category | Scope | Typical Examples |
