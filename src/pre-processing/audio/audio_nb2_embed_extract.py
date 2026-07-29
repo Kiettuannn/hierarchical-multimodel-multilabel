@@ -50,10 +50,10 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────────────────────────────────────
-INDEX_CSV_PATH = "/kaggle/input/tiktok-audio-preprocessed/no_vocals_index.csv"
+# INDEX_CSV_PATH = "/kaggle/input/tiktok-audio-preprocessed/no_vocals_index.csv" # Bỏ dòng này
 CLAP_MODEL_ID  = "laion/larger_clap_general"   # 512-dim, tốt hơn clap-htsat-fused
 BATCH_SIZE     = 16                             # Tăng nếu còn VRAM, giảm nếu OOM
-SAMPLE_RATE    = 16000                          # Phải khớp với Demucs output
+SAMPLE_RATE    = 48000                          # CLAP model laion/larger_clap_general yêu cầu 48kHz
 MAX_DURATION_S = 60.0                           # Clip tối đa 60s (TikTok max)
 
 OUTPUT_ROOT  = Path("/kaggle/working/audio_embeddings")
@@ -77,9 +77,23 @@ for p in clap_model.parameters():
 logger.info("CLAP model loaded and frozen ✅")
 logger.info(f"Audio embedding dim: {clap_model.config.projection_dim}")
 
-# ── Cell 4: Load index CSV ────────────────────────────────────────────────────
-index_df = pd.read_csv(INDEX_CSV_PATH)
-logger.info(f"Index CSV: {len(index_df):,} entries")
+# ── Cell 4: Build index DataFrame from ALL parts ───────────────────────────────
+logger.info("Scanning for no_vocals.wav in /kaggle/input ...")
+base_input_dir = Path("/kaggle/input")
+no_vocals_files = list(base_input_dir.rglob("no_vocals.wav"))
+
+index_rows = []
+for no_vocals_pth in no_vocals_files:
+    stem_name = no_vocals_pth.parent.name
+    filename = f"{stem_name}.mp4" 
+    index_rows.append({
+        "filename": filename,
+        "stem_name": stem_name,
+        "no_vocals_path": str(no_vocals_pth),
+    })
+
+index_df = pd.DataFrame(index_rows)
+logger.info(f"Found {len(index_df):,} audio files across all parts.")
 logger.info(f"Columns: {index_df.columns.tolist()}")
 
 # ── Cell 5: Helper functions ──────────────────────────────────────────────────
@@ -91,7 +105,7 @@ def load_audio(wav_path: str, max_duration: float = MAX_DURATION_S) -> np.ndarra
     try:
         audio, sr = librosa.load(wav_path, sr=SAMPLE_RATE, mono=True,
                                  duration=max_duration)
-        if len(audio) < 1600:   # < 0.1s → skip (file rỗng hoặc hỏng)
+        if len(audio) < int(SAMPLE_RATE * 0.1):   # < 0.1s → skip (file rỗng hoặc hỏng)
             return None
         return audio.astype(np.float32)
     except Exception as e:
@@ -106,15 +120,23 @@ def extract_embeddings_batch(audio_batch: list[np.ndarray]) -> np.ndarray:
     Returns: numpy array shape (B, 512)
     """
     inputs = clap_processor(
-        audios=audio_batch,
+        audio=audio_batch,
         sampling_rate=SAMPLE_RATE,
         return_tensors="pt",
         padding=True
     )
     inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
 
-    # Lấy audio embedding (projected 512-dim)
-    audio_embed = clap_model.get_audio_features(**inputs)  # (B, 512)
+    # Lấy audio embedding một cách tường minh để tránh lỗi trả về object của Transformers
+    audio_outputs = clap_model.audio_model(**inputs)
+    
+    # Lấy pooler_output và đưa qua lớp chiếu (projection) xuống 512-dim
+    if hasattr(audio_outputs, "pooler_output"):
+        pooled = audio_outputs.pooler_output
+    else:
+        pooled = audio_outputs[1] # Fallback nếu return_dict=False
+        
+    audio_embed = clap_model.audio_projection(pooled) # (B, 512)
     return audio_embed.cpu().numpy().astype(np.float32)
 
 
@@ -157,19 +179,28 @@ for batch_start in tqdm(range(0, len(rows), BATCH_SIZE), desc="Extracting CLAP E
         batch_stems.append(stem_name)
         batch_filenames.append(filename)
 
-    if not batch_audios:
-        continue
+    if batch_audios:
+        try:
+            embeddings = extract_embeddings_batch(batch_audios)  # (B, 512)
+            for i, (stem_name, filename) in enumerate(zip(batch_stems, batch_filenames)):
+                emb_path = EMB_DIR / f"{stem_name}.npy"
+                np.save(str(emb_path), embeddings[i])   # shape (512,)
+                results["success"].append(filename)
+        except Exception as e:
+            logger.error(f"Batch embedding failed: {e}")
+            for filename in batch_filenames:
+                results["emb_failed"].append(filename)
 
-    try:
-        embeddings = extract_embeddings_batch(batch_audios)  # (B, 512)
-        for i, (stem_name, filename) in enumerate(zip(batch_stems, batch_filenames)):
-            emb_path = EMB_DIR / f"{stem_name}.npy"
-            np.save(str(emb_path), embeddings[i])   # shape (512,)
-            results["success"].append(filename)
-    except Exception as e:
-        logger.error(f"Batch embedding failed: {e}")
-        for filename in batch_filenames:
-            results["emb_failed"].append(filename)
+    # --- Thêm log tiến trình sau mỗi 50 batch (khoảng 800 files) ---
+    current_batch_idx = batch_start // BATCH_SIZE
+    if (current_batch_idx + 1) % 50 == 0:
+        processed_files = batch_start + len(batch_rows)
+        logger.info(
+            f"Progress: {processed_files}/{len(rows)} files | "
+            f"Success: {len(results['success'])} | "
+            f"Skipped: {len(results['skipped'])} | "
+            f"Failed: {len(results['load_failed']) + len(results['emb_failed'])}"
+        )
 
 elapsed = time.time() - t_start
 logger.info(f"Total time: {elapsed/60:.1f} min")
