@@ -55,6 +55,53 @@ Background sounds (explosions, screaming, or specific music) provide excellent c
 
 ---
 
+## Dataset Statistics and Exploratory Data Analysis (EDA)
+
+Comprehensive exploratory data analysis is implemented in [`src/eda/dataset_statistics.ipynb`](src/eda/dataset_statistics.ipynb), analyzing 6,285 videos and ground-truth annotations across `data/label-origin.csv` and `data/video_parts/` (`part_01` to `part_13`).
+
+### 1. Label Distribution and Class Imbalance
+
+The dataset consists of 6,285 samples:
+- **Normal Content**: 1,620 videos (25.78%)
+- **Harmful Content**: 4,665 videos (74.22%)
+
+Among the 7 fine-grained harm categories:
+- `addictive_harm`: 1,142 samples (18.17%)
+- `physical_harm`: 1,081 samples (17.20%)
+- `psychological_harm`: 1,003 samples (15.96%)
+- `clickbait_harm`: 828 samples (13.17%)
+- `hate_harassment_harm`: 540 samples (8.59%)
+- `sexual_harm`: 533 samples (8.48%)
+- `information_harm`: 269 samples (4.28%) - rare class
+
+![Label Distribution](images/eda/label_distribution.png)
+
+### 2. Multi-label Cardinality and Co-occurrence
+
+- **0 labels (Normal Content)**: 1,620 videos (25.8%)
+- **1 harm label**: 3,937 videos (62.6%)
+- **2 harm labels**: 725 videos (11.5%)
+- **3 harm labels**: 3 videos (0.05%)
+
+![Label Cardinality](images/eda/label_cardinality.png)
+
+![Label Co-occurrence Matrix](images/eda/label_cooccurrence_matrix.png)
+
+### 3. Video Technical Metadata
+
+Extracted from 6,285 videos cached in `data/video_metadata.csv`:
+- **Durations**: Median 29.40s, Mean 46.65s (Min: 1.04s, 75th percentile: 59.98s, Max: 298.30s). All videos are under 300s.
+- **Aspect Ratios**: 91.87% vertical format (9:16, e.g. 720x1280 or 1080x1920), matching short-form video standards.
+- **File Integrity**: 6,285 / 6,285 (100%) videos successfully verified without container corruption.
+
+![Video Duration Distribution](images/eda/video_duration_distribution.png)
+
+![Video Resolution Distribution](images/eda/video_resolution_distribution.png)
+
+![Video File Size Distribution](images/eda/video_file_size_distribution.png)
+
+---
+
 ## 🏗️ Architecture & Training
 
 The entire process converges in `src/training/pipeline-training-hierarchical.ipynb`. We apply a coarse-to-fine strategy using a **Cascade Pipeline**.
