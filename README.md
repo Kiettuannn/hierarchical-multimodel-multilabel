@@ -6,72 +6,67 @@ The explosive growth of short-form video platforms (like TikTok and Reels) bring
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
-The entire pipeline, from raw data processing to model training, is systematically organized in the `src/` directory:
+The project separates the production application services from offline research experiments and pipelines:
 
-```bash
-src/
-├── pre-processing/
-│   ├── asr/          # Speech-to-text (Whisper), LLM Normalize & Embeddings Extraction
-│   ├── audio/        # Ambient audio feature extraction (CLAP)
-│   ├── ocr/          # On-screen text extraction (PaddleOCR), LLM Normalize & Embeddings
-│   ├── video/        # Frame sampling, Scene Description (Gemma 4), SigLIP2 & PhoBERT Embeddings
-│   ├── dataloader/   # Dataset splitting (Iterative Stratification)
-│   └── eda/          # Exploratory Data Analysis and Statistics
-└── training/
-    └── pipeline-training-hierarchical.ipynb  # End-to-end Cascade training notebook
+```text
+.
+├── backend/                  # FastAPI Clean Architecture backend
+│   ├── app/
+│   │   ├── api/v1/           # API routes, DTO schemas, dependencies
+│   │   ├── core/             # Configuration, logging, settings
+│   │   ├── domain/           # Entities, value objects, domain interfaces (IInferenceService)
+│   │   ├── services/         # Application use cases (ModerationService)
+│   │   └── infrastructure/   # Storage & Inference adapters (Mock, Pipeline)
+│   ├── tests/                # Automated API test suite
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/                 # React + TypeScript + Tailwind CSS (Vite)
+│   ├── src/
+│   │   ├── components/       # VideoUploader, JobStatusView, TaxonomyBadge
+│   │   ├── services/         # API integration client
+│   │   ├── types/            # TypeScript contracts matching domain taxonomy
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── Dockerfile            # Multi-stage build with Nginx
+│   └── package.json
+├── experiments/              # Offline research, training, and feature extraction (Kaggle/Colab)
+│   ├── eda/                  # Exploratory Data Analysis and Statistics
+│   ├── inference/            # End-to-end demo scripts and test notebooks
+│   ├── pre-processing/       # Modality extraction (ASR, Audio, OCR, Video, Stratified Split)
+│   └── training/             # Hierarchical Cascade training notebooks and scripts
+├── docs/
+│   ├── adr/                  # Architectural Decision Records (ADRs)
+│   └── agents/               # Domain docs and guidelines
+├── data/                     # Ground-truth annotations (label-origin.csv) and video parts
+├── docker-compose.yml        # Multi-container orchestration
+└── .env.example
 ```
 
 ---
-## Dataset
-- We collected and manually annotated a dataset of 6,285 Vietnamese TikTok videos by extending the **[MetaHarm](https://arxiv.org/abs/2504.16304)** taxonomy. Specifically, we introduced one additional harmful-content category: Psychological and refined the category definitions to better reflect the linguistic, cultural, and social characteristics of Vietnamese TikTok, with a particular focus on child safety.
-## Harmful Content Taxonomy
 
-| Category | Scope | Typical Examples |
-|----------|-------|------------------|
-| **Information Harms** | Content that spreads misinformation, disinformation, conspiracy theories, unverified medical treatments, fabricated news, or anti-government propaganda targeting Vietnam. | Fake news, conspiracy theories, unverified health advice, fabricated stories, anti-state propaganda. |
-| **Hate and Harassment Harms** | Content containing insults, abusive language, identity attacks, or hate speech targeting individuals or groups based on gender, race, ethnicity, age, religion, political ideology, disability, or sexual orientation. | Hate speech, harassment, identity-based discrimination, offensive slurs, targeted abuse. |
-| **Addictive Harms** | Content that promotes or encourages addictive or harmful behaviors, including online gaming addiction, drug use, smoking, alcohol consumption, and gambling. | Online gaming promotion, drug-related content, smoking, alcohol abuse, gambling videos. |
-| **Clickbait Harms** | Content designed to manipulate user engagement through misleading or sensational claims, fraudulent financial schemes, superstition, or rumor promotion. | Clickbait titles, game account trading, get-rich-quick schemes, financial scams, rumor spreading, superstition, fortune-telling, love spells. |
-| **Physical Harms** | Content depicting or promoting self-harm, suicide, eating disorders, dangerous challenges or pranks, and graphic violent content. | Self-harm, suicide-related content, eating disorder promotion, dangerous challenges, graphic violence. |
-| **Sexual Harms** | Content containing sexually explicit material, nudity, sexual activities, sexual exploitation, or sexually suggestive performances. | Pornography, nudity, sexual acts, sexual abuse, sexually explicit conversations, revealing dance videos. |
-| **Psychological Harms** | Content that may cause psychological distress, fear, or emotional discomfort, including horror, supernatural, or depressive content. | Horror videos, ghost or supernatural content, disturbing scenes, emotionally depressing or stressful videos. |
+## Quickstart with Docker
 
+```bash
+# 1. Copy environment template
+cp .env.example .env
 
-## ⚙️ Pre-processing Pipeline
+# 2. Build and launch services in background
+docker-compose up --build -d
 
-The raw dataset (6,285 videos) undergoes independent processing across 4 modalities to extract maximum context:
+# 3. Access endpoints
+# Frontend Dashboard: http://localhost:3000
+# Backend API Docs:   http://localhost:8000/api/v1/docs
+```
 
-### 1. 👁️ Vision (`src/pre-processing/video`)
-Visuals are core but can be noisy without context.
-- **Extract Frames:** Sample 8 representative frames per video.
-- **Scene Description:** Use a Vision-Language Model (Gemma 4) to describe the scene in text, helping the model understand "actions" rather than just static pixels.
-- **Embedding:** Generate feature vectors using **SigLIP2** (for images) and **PhoBERT** (for text descriptions), followed by Concat.
-
-### 2. 🗣️ ASR (`src/pre-processing/asr`)
-- **Transcribe:** Use ChunkFormer to transcribe all dialogues.
-- **LLM Normalize & Priors:** Use an LLM to clean the text and act as an early moderator to generate prior predictions (Tabular Priors) for the 7 harmful labels.
-- **Sliding Window Embedding:** Long transcripts exceed the model's token limit. We apply a **Sliding Window** mechanism combined with **PhoBERT** to preserve semantic meaning.
-
-### 3. 📝 OCR (`src/pre-processing/ocr`)
-- **Extract:** Scan frames using PaddleOCR to detect and VietOCR to recognize text.
-- **Clean & Normalize:** OCR data is often messy. We use an LLM to group text, fix typos, and generate 5 Auxiliary Priors.
-- **Embedding:** Extract features using **PhoBERT**.
-
-### 4. 🎵 Ambient Audio (`src/pre-processing/audio`)
-Background sounds (explosions, screaming, or specific music) provide excellent context.
-- Preprocessing: Use Demucs to separate audio into No_Vocals
-- Use the **CLAP** (Contrastive Language-Audio Pretraining) model to embed audio signals into a 512-dimensional vector.
-
-### 5. 🗂️ Data Splitting (`src/pre-processing/dataloader`)
-- We use the `IterativeStratification` algorithm to create a 70/15/15 (Train/Val/Test) split. This ensures that extremely rare labels (like `information_harm`) are evenly distributed without causing data leakage.
+Local development uses `INFERENCE_MODE=mock` by default to test without GPU dependencies.
 
 ---
 
 ## Dataset Statistics and Exploratory Data Analysis (EDA)
 
-Comprehensive exploratory data analysis is implemented in [`src/eda/dataset_statistics.ipynb`](src/eda/dataset_statistics.ipynb), analyzing 6,285 videos and ground-truth annotations across `data/label-origin.csv` and `data/video_parts/` (`part_01` to `part_13`).
+Comprehensive exploratory data analysis is implemented in [`experiments/eda/dataset_statistics.ipynb`](experiments/eda/dataset_statistics.ipynb), analyzing 6,285 videos and ground-truth annotations across `data/label-origin.csv` and `data/video_parts/` (`part_01` to `part_13`).
 
 ### 1. Label Distribution and Class Imbalance
 
@@ -116,9 +111,9 @@ Extracted from 6,285 videos cached in `data/video_metadata.csv`:
 
 ---
 
-## 🏗️ Architecture & Training
+## Architecture & Training
 
-The entire process converges in `src/training/pipeline-training-hierarchical.ipynb`. We apply a coarse-to-fine strategy using a **Cascade Pipeline**.
+The entire process converges in `experiments/training/pipeline-training-hierarchical.ipynb`. We apply a coarse-to-fine strategy using a **Cascade Pipeline**.
 
 ![extract](images/pipeline_extract.svg)
 ![train](images/pipeline_train.svg)

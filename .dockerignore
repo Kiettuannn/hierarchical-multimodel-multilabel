@@ -1,0 +1,16 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.idea
+.vscode
+data/video_parts
+data/
+experiments/
+node_modules
+dist
+build
+.env

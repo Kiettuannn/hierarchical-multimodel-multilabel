@@ -1,4 +1,23 @@
-.venv
-/data
-.idea
+# Environments
+.venv/
+env/
+venv/
+.env
+
+# Dependencies
+node_modules/
 __pycache__/
+*.pyc
+
+# Build outputs
+dist/
+build/
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+
+# Datasets and large uploads
+/data/
+/tmp/hmm_uploads/

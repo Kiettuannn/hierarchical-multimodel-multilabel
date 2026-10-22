@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hmm_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=HMM-Net Moderation API
+      - INFERENCE_MODE=mock
+      - DEBUG=True
+      - UPLOAD_DIR=/tmp/hmm_uploads
+    volumes:
+      - video_uploads:/tmp/hmm_uploads
+    restart: unless-stopped
+    networks:
+      - hmm_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hmm_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - hmm_network
+
+volumes:
+  video_uploads:
+
+networks:
+  hmm_network:
+    driver: bridge
