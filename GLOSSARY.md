@@ -27,3 +27,15 @@ _Avoid_: Raw labels, annotation table, source CSV
 **Video Metadata**:
 Extracted technical attributes of a video file, specifically duration, resolution width and height, frame rate, file size, and file read validity.
 _Avoid_: Video stats, video properties, video info
+
+**Raw Video Archive**:
+The cold-storage collection of raw `.mp4` video files partitioned into Video Parts and archived on a remote registry.
+_Avoid_: Video dump, raw bucket, video blob
+
+**Feature Registry**:
+The versioned storage repository holding precomputed multimodal embeddings (Vision, ASR, OCR, CLAP) and tabular prior signals keyed by video filename.
+_Avoid_: Embedding store, feature dump
+
+**Data Split**:
+The reproducible partition assignment of dataset items into train, validation, and test subsets preserved via split configuration tables.
+_Avoid_: Data fold, train split set, dataset partition
