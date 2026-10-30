@@ -9,20 +9,23 @@ Local Storage (Source)
 └── data/
     ├── label-origin.csv
     ├── video_metadata.csv
-    └── video_parts/ (part_01 to part_13)
+    └── video_parts/ (part_01 to part_13, part_14, ...)
            │
            ▼ (scripts/upload_raw_archive_to_hf.py)
 Hugging Face Hub (Private Dataset: Cold Storage)
 └── <username>/<dataset-repo-id>
-    ├── metadata/
-    │   ├── label-origin.csv
-    │   └── video_metadata.csv
-    └── videos/
-        ├── part_01.zip (~2.08 GB)
-        ├── ...
-        └── part_13.zip (~1.31 GB)
+    ├── branch: main (Canonical Dataset)
+    │   ├── metadata/ (label-origin.csv, video_metadata.csv)
+    │   └── videos/   (part_01.zip ... part_13.zip)
+    │
+    └── branch: experiment-batch-02 (Experimental / Staging)
+        ├── metadata/ (experimental labels)
+        └── videos/   (part_14.zip, ...)
            │
-           ▼ (Kaggle Feature Extraction Notebook)
+           ▼ (scripts/download_archive_from_hf.py)
+Kaggle / Colab Cloud GPUs (Feature Extraction)
+           │
+           ▼
 Kaggle Datasets (Feature Registry: Warm Storage)
 ├── vision-embeddings-final/ (1536-d SigLIP2 .npy)
 ├── asr-embeddings/ (768-d PhoBERT .npy + priors)
@@ -33,54 +36,121 @@ Kaggle Datasets (Feature Registry: Warm Storage)
 Kaggle Training Notebooks (experiments/training/)
 ```
 
+---
+
 ## 2. Archiving and Uploading from Local
 
-Use the automated script [scripts/upload_raw_archive_to_hf.py](file:///D:/Workspace/hierachical-multimodel-multilabel/scripts/upload_raw_archive_to_hf.py) to package and upload raw video parts and metadata to Hugging Face:
+Use [scripts/upload_raw_archive_to_hf.py](file:///D:/Workspace/hierachical-multimodel-multilabel/scripts/upload_raw_archive_to_hf.py) to package and upload raw video parts and metadata.
 
-```bash
-# Option A: If already logged in locally via huggingface-cli, HF_TOKEN is auto-detected
-python scripts/upload_raw_archive_to_hf.py `
-  --repo-id "KietTuannn/hierarchical-harmful-video-archive" `
-  --delete-local-archive-on-success
+### 2.1. Upload Official Dataset (Branch: `main`)
 
-# Option B: Or explicitly provide your HF_TOKEN
-$env:HF_TOKEN="hf_xxxxxxxxxxxxxxxxxxxxxx"
+```powershell
+# Upload all parts (part_01 through part_13) and metadata to the main branch
 python scripts/upload_raw_archive_to_hf.py `
   --repo-id "KietTuannn/hierarchical-harmful-video-archive" `
   --delete-local-archive-on-success
 ```
 
-Key features:
-- **Zero redundant compression**: MP4 files are already H.264 compressed; the script archives them using `ZIP_STORED` mode to maximize CPU throughput.
-- **Resume-capable**: Automatically checks remote Hugging Face files and skips parts that were already uploaded.
-- **Disk space optimization**: `--delete-local-archive-on-success` removes local temporary zip files immediately after each part is uploaded.
+### 2.2. Upload Experimental Videos (Custom Branch)
 
-## 3. Consuming Raw Videos in Cloud Notebooks (Kaggle / Colab)
+When you have new experimental videos that should not pollute the canonical ground-truth dataset:
 
-To download a specific `Video Part` on Kaggle without transferring the entire 27 GB dataset:
+```powershell
+# Upload only part_14 to a dedicated experimental branch (e.g., experiment-batch-02)
+python scripts/upload_raw_archive_to_hf.py `
+  --repo-id "KietTuannn/hierarchical-harmful-video-archive" `
+  --branch "experiment-batch-02" `
+  --parts "part_14" `
+  --skip-metadata `
+  --delete-local-archive-on-success
+```
+
+* The script automatically creates the branch `experiment-batch-02` on Hugging Face if it does not exist.
+* The `main` branch remains untouched.
+* When experimental results are validated, you can merge the branch into `main` directly on the Hugging Face Web UI via Pull Request.
+
+---
+
+## 3. Downloading Datasets in Cloud Notebooks (Kaggle / Colab)
+
+Use [scripts/download_archive_from_hf.py](file:///D:/Workspace/hierachical-multimodel-multilabel/scripts/download_archive_from_hf.py) or the programmatic Python helper.
+
+### 3.1. Download Full Dataset (CLI with Disk-Safe Mode)
+
+On Kaggle Notebooks, disk space in `/kaggle/working` is capped at 20 GB. Using `--disk-safe` downloads each part, extracts it, and deletes the zip file immediately:
+
+```bash
+# Download and extract all 13 parts sequentially while preserving disk space
+python scripts/download_archive_from_hf.py \
+  --repo-id "KietTuannn/hierarchical-harmful-video-archive" \
+  --all \
+  --disk-safe
+```
+
+### 3.2. Download a Single Part (or Experimental Branch)
+
+```bash
+# Download part_01 from main
+python scripts/download_archive_from_hf.py \
+  --repo-id "KietTuannn/hierarchical-harmful-video-archive" \
+  --part "part_01" \
+  --disk-safe
+
+# Download an experimental part from a custom branch
+python scripts/download_archive_from_hf.py \
+  --repo-id "KietTuannn/hierarchical-harmful-video-archive" \
+  --branch "experiment-batch-02" \
+  --part "part_14" \
+  --disk-safe
+```
+
+### 3.3. Programmatic Python Snippet for Kaggle Notebooks
+
+If you prefer calling Python code directly inside a Kaggle notebook cell without using the CLI:
 
 ```python
 import os
 import zipfile
-from huggingface_hub import hf_hub_download
+from pathlib import Path
+from huggingface_hub import HfApi, hf_hub_download
 from kaggle_secrets import UserSecretsClient
 
-# Retrieve Hugging Face token from Kaggle Secrets
+# 1. Authenticate using Kaggle Secrets
 user_secrets = UserSecretsClient()
 hf_token = user_secrets.get_secret("HF_TOKEN")
+repo_id = "KietTuannn/hierarchical-harmful-video-archive"
+target_dir = Path("/kaggle/working/data/video_parts")
+target_dir.mkdir(parents=True, exist_ok=True)
 
-# Download targeted partition
-zip_path = hf_hub_download(
-    repo_id="your-username/hierarchical-harmful-video-archive",
-    filename="videos/part_01.zip",
-    repo_type="dataset",
-    token=hf_token,
-)
+api = HfApi(token=hf_token)
 
-# Extract into working directory
-with zipfile.ZipFile(zip_path, "r") as archive:
-    archive.extractall("/kaggle/working/data")
+# 2. Get all available part archives from Hugging Face
+files = api.list_repo_files(repo_id=repo_id, repo_type="dataset", revision="main")
+part_files = sorted([f for f in files if f.startswith("videos/") and f.endswith(".zip")])
+
+print(f"Found {len(part_files)} video parts to download: {part_files}")
+
+# 3. Rolling download and extraction (disk-safe)
+for remote_zip in part_files:
+    print(f"\nProcessing {remote_zip}...")
+    local_zip = hf_hub_download(
+        repo_id=repo_id,
+        filename=remote_zip,
+        repo_type="dataset",
+        token=hf_token,
+    )
+    
+    # Extract
+    with zipfile.ZipFile(local_zip, "r") as archive:
+        archive.extractall(target_dir)
+    print(f"Extracted {remote_zip} to {target_dir}")
+    
+    # Reclaim disk space immediately
+    os.remove(local_zip)
+    print(f"Removed temporary zip: {local_zip}")
 ```
+
+---
 
 ## 4. Pipeline Training Integration
 

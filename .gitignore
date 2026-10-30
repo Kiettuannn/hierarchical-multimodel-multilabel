@@ -9,10 +9,6 @@ node_modules/
 __pycache__/
 *.pyc
 
-# Build outputs
-dist/
-build/
-
 # IDE and editors
 .idea/
 .vscode/
@@ -21,3 +17,7 @@ build/
 # Datasets and large uploads
 /data/
 /tmp/hmm_uploads/
+
+# Credentials and Cookies
+*cookie*
+*cookies*.txt

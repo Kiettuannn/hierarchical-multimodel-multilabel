@@ -7,3 +7,5 @@ openai
 google-genai
 scikit-multilearn
 scikit-learn
+yt-dlp
+playwright

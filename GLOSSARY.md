@@ -32,6 +32,14 @@ _Avoid_: Video stats, video properties, video info
 The cold-storage collection of raw `.mp4` video files partitioned into Video Parts and archived on a remote registry.
 _Avoid_: Video dump, raw bucket, video blob
 
+**Raw Video**:
+An unwatermarked `.mp4` video file retrieved from a source content platform named by its canonical platform video identifier.
+_Avoid_: Watermarked clip, crawled video, raw clip
+
+**Download Archive**:
+A persistent tracking log recording successfully retrieved video identifiers to guarantee crawl idempotency and resume capability across execution runs.
+_Avoid_: Crawl cache, download history, seen list
+
 **Feature Registry**:
 The versioned storage repository holding precomputed multimodal embeddings (Vision, ASR, OCR, CLAP) and tabular prior signals keyed by video filename.
 _Avoid_: Embedding store, feature dump
@@ -39,3 +47,11 @@ _Avoid_: Embedding store, feature dump
 **Data Split**:
 The reproducible partition assignment of dataset items into train, validation, and test subsets preserved via split configuration tables.
 _Avoid_: Data fold, train split set, dataset partition
+
+**App-Restricted Video**:
+A TikTok video sample whose full media stream is restricted from desktop web browsers and requires mobile application access (such as TikTok Shop showcases or promoted posts), causing standard web extractors to fail with HTTP 403 Forbidden or audio-only streams.
+_Avoid_: TikTok Shop video, 403 clip, shopping video
+
+**Browser Resolver**:
+An automated browser controller that navigates external web services or platform interfaces using a real browser engine to retrieve unwatermarked Raw Videos when direct HTTP extraction is blocked.
+_Avoid_: Scraping bot, download helper, web wrapper
