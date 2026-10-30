@@ -3,9 +3,11 @@ opencv-python
 tqdm
 rapidfuzz
 matplotlib
+seaborn
 openai
 google-genai
 scikit-multilearn
 scikit-learn
 yt-dlp
 playwright
+huggingface-hub
